@@ -3,16 +3,11 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 import nltk
-"""from jupyterthemes import jtplot
-jtplot.style(theme='monokai', context='notebook', ticks=True, grid=False) """
-# setting the style of the notebook to be monokai theme  
-# this line of code is important to ensure that we are able to see the x and y axes clearly
-# If you don't run this code line, you will notice that the xlabel and ylabel on any plot is black on black and it will be hard to see them. 
-#import libraries 
 import re
+from sklearn.feature_extraction.text import TfidfVectorizer
 import string
 import nltk
-
+from nltk.stem import PorterStemmer
 from nltk.stem.wordnet import WordNetLemmatizer
 import spacy
 import nltk
@@ -21,606 +16,34 @@ nltk.download('omw-1.4')
 from nltk.corpus import stopwords
 stop = stopwords.words('english')
 
-#connect to google drive
-"""from google.colab import drive
-drive.mount('/content/drive')"""
-
 # Load the data
-reviews_df = pd.read_csv('amazon_reviews.csv') #you should change the path 
-reviews_df
-
-# Load spacy
-nlp = spacy.load('en_core_web_sm')
-
-def clean_string(text, stem="None"):
-
-    final_string = ""
-
-    # Make lower
-    text = text.lower()
-
-    # Remove line breaks
-    text = re.sub(r'\n', '', text)
-    
-
-    # Remove puncuation
-    translator = str.maketrans('', '', string.punctuation)
-    text = text.translate(translator)
-
-    # Remove stop words
-    text = text.split()
-    
-    useless_words = ['hi', 'im']
-
-    text_filtered = [word for word in text if not word in useless_words]
-
-    # Remove numbers
-    text_filtered = [re.sub(r'\w*\d\w*', '', w) for w in text_filtered]
-
-
-    if stem == 'Lem':
-        lem = WordNetLemmatizer()
-        text_stemmed = [lem.lemmatize(y) for y in text_filtered]
-
-    final_string = ' '.join(text_stemmed)
-
-    return final_string
-
-reviews_df['verified_reviews'] = reviews_df['verified_reviews'].apply(lambda x: clean_string(x, stem='Lem')) #apply the function clean_string
-reviews_df['verified_reviews'] = reviews_df['verified_reviews'].apply(lambda x: ' '.join([word for word in x.split() if word not in (stop)])) #remove stop words from the column.
-
-reviews_df['variation'].value_counts()
-
-# View the DataFrame Information
-reviews_df.info()
-
-import pandas as pd   #create the Date receiced column that will be used later in the dashbboard
-reviews_df['Date received'] = pd.to_datetime(reviews_df['date'].str.strip(), infer_datetime_format=True)
-reviews_df['Date received'] = pd.to_datetime(reviews_df['Date received'].dt.strftime('%m-%d-%Y'))
-
-min_date = reviews_df["Date received"].min()
-max_date = reviews_df["Date received"].max()
-max_date
-#these values will be used later in the dashboard
-
-reviews_df  # format="%m/%d/%Y" #this format is required in the dash
-
-# View DataFrame Statistical Summary
-reviews_df.describe()
-
-"""**MINI CHALLENGE #1:** 
-- **Drop the 'date' column from the DataFrame** 
-- **Ensure that the column has been succesfully dropped** 
-"""
-
-reviews_df = reviews_df.drop(['date'], axis=1)
-reviews_df.head()
-
-"""# Bigram Part"""
-
-#bigrams_EDA , cleaning for the bigram extraction task
-bigram_freq = lambda s: list(nltk.FreqDist(nltk.bigrams(s.split(" "))).items())
-reviewss_df = reviews_df.copy()
-reviewss_df['bigrams']= reviewss_df['verified_reviews'].apply(bigram_freq)
-reviewss_df =reviewss_df.explode('bigrams')
-reviewss_df['bigram'], reviewss_df['b'] = reviewss_df.bigrams.str
-
-def remove_emojis(data):
-    emoj = re.compile("["
-        u"\U0001F600-\U0001F64F"  # emoticons
-        u"\U0001F300-\U0001F5FF"  # symbols & pictographs
-        u"\U0001F680-\U0001F6FF"  # transport & map symbols
-        u"\U0001F1E0-\U0001F1FF"  # flags (iOS)
-        u"\U00002500-\U00002BEF"  # chinese char
-        u"\U00002702-\U000027B0"
-        u"\U00002702-\U000027B0"
-        u"\U000024C2-\U0001F251"
-        u"\U0001f926-\U0001f937"
-        u"\U00010000-\U0010ffff"
-        u"\u2640-\u2642" 
-        u"\u2600-\u2B55"
-        u"\u200d"
-        u"\u23cf"
-        u"\u23e9"
-        u"\u231a"
-        u"\ufe0f"  # dingbats
-        u"\u3030" "]+", re.UNICODE)
-    return re.sub(emoj, '', str(data)) 
-
-reviewss_df['bigram'] = reviewss_df.apply(lambda x: remove_emojis(x.bigram), axis=1)
-reviewss_df['bigram'] = reviewss_df['bigram'].astype(str).str.replace("(", "")
-reviewss_df['bigram'] = reviewss_df['bigram'].astype(str).str.replace("[!@#$]", "") 
-reviewss_df['bigram'] = reviewss_df['bigram'].astype(str).str.replace(")", "")
-reviewss_df['bigram'] = reviewss_df['bigram'].astype(str).str.replace("'", "")
-reviewss_df['bigram'] = reviewss_df['bigram'].astype(str).str.replace("'", "")
-reviewss_df['bigram'] = reviewss_df['bigram'].astype(str).str.replace(",", "_")
-reviewss_df['bigram'] = reviewss_df['bigram'].astype(str).str.replace("_ ", "_")
-reviewss_df['bigram'] = reviewss_df['bigram'].astype(str).str.replace(" _", "_")
-del reviewss_df['b']
-bigram_df =reviewss_df.groupby(['bigram','variation']).size().reset_index() 
-bigram_df = bigram_df.rename(columns={0: 'value', 'variation': 'company','bigram':'ngram'})# the output is a dataframe with bigrams grouped by varitation with count.
-
-bigram_df
-
-bigram_df = bigram_df[bigram_df.ngram != '_']
-bigram_df = bigram_df[bigram_df.ngram != '_a']
-bigram_df = bigram_df[bigram_df.ngram != '_not']
-bigram_df = bigram_df[bigram_df.ngram != '_and']
-bigram_df = bigram_df[bigram_df.ngram != ' _not']
-bigram_df = bigram_df[bigram_df.ngram != ' _and']
-bigram_df = bigram_df[bigram_df.ngram != ' _are']
-
-#cleanning 
-bigram_df = bigram_df[bigram_df.ngram != 'nan']
-bigram_df['ngram'] = bigram_df['ngram'].astype(str).str.replace("—", " ")
-bigram_df['ngram'] = bigram_df['ngram'].astype(str).str.replace("“", " ")
-bigram_df['ngram'] = bigram_df['ngram'].astype(str).str.replace("‘", " ")
-bigram_df['ngram'] = bigram_df['ngram'].astype(str).str.replace("’", " ")
-bigram_df['ngram'] = bigram_df['ngram'].astype(str).str.replace(" ", "")
-bigram_df['ngram'] = bigram_df['ngram'].astype(str).str.replace("”", " ")
-bigram_df
-
-embed_df = bigram_df.copy()   #embed_df will be used later in the dashboard, is just a groupby dataframe 
-#embed_df = embed_df.ngram.value_counts()
-embed_df = embed_df.groupby('ngram').count().reset_index()
-embed_df = embed_df.sort_values(
-   by="company",
-    ascending=False
-)
-embed_df = embed_df.rename(columns={'ngram': 'bigram', 'company': 'count','value':'words'}) #just remaining for the dashboard
-embed_df = embed_df.iloc[:22]  #take only the 21 most frequent bigrams that will be plotted in the dashboard later
-embed_df
-
-"""# TASK #3: PERFORM DATA VISUALIZATION"""
-
-reviews_df['variation'].value_counts()
-
-# Check for missing values
-reviews_df.isnull()
-
-# Check for missing with a heatmap to confirm
-sns.heatmap(reviews_df.isnull(), yticklabels = False)
-
-# Plot the count plot for the ratings 
-sns.countplot(x = reviews_df['rating'])
-
-"""**MINI CHALLENGE #2:** 
-- **Plot the countplot for the feedback column**
-- **Roughly how many positive and negative feedback are present in the dataset?**
-"""
-
-# Plot the count plot for the feedback
-sns.countplot(x = reviews_df['feedback'])
-
-"""# TASK #4: PERFORM DATA EXPLORATION"""
-
-# Get the length of characters for each verfied review
-reviews_df['length'] = (reviews_df['verified_reviews']).apply(len)
-
-reviews_df
-
-# Plot the histogram for the length
-reviews_df['length'].plot(bins = 100, kind = 'hist')
-
-# Apply the describe method to get statistical summary
-reviews_df.describe()
-
-# Let's see the longest message 
-reviews_df[reviews_df['length'] == 2851]
-
-# Grab only the verified reviews column and show the first element
-#reviews_df[reviews_df['length'] == 2851]['verified_reviews'].iloc[0]
-
-"""**MINI CHALLENGE #3:**
-- **View the message with the average length**
-"""
-
-# View the message with the average length
-reviews_df[reviews_df['length'] == 132]['verified_reviews'].iloc[0]
-
-"""# TASK #5: PLOT THE WORDCLOUD"""
-
-# Obtain only the positive reviews
-positive = reviews_df[reviews_df['feedback']==1]
-
-positive
-
-# Obtain the negative reviews only
-negative = reviews_df[reviews_df['feedback']==0]
-
-negative
-
-# Convert to list format
-sentences = positive['verified_reviews'].tolist()
-len(sentences)
-
-type(sentences)
-
-# Join all reviews into one large string
-sentences_as_one_string = ' '.join(sentences)
-
-type(sentences_as_one_string)
-
-from wordcloud import WordCloud
-
-plt.figure(figsize=(20,20))
-plt.imshow(WordCloud().generate(sentences_as_one_string))
-
-"""**MINI CHALLENGE #4:** 
-- **Plot the wordcloud of the "negative" dataframe** 
-- **What do you notice? Does the data make sense?**
-"""
-
-# Plot the wordcloud of the "negative" dataframe
-sentences = negative['verified_reviews'].tolist() # Convert to list format
-sentences_as_one_string = ' '.join(sentences)
-plt.figure(figsize=(20,20))
-plt.imshow(WordCloud().generate(sentences_as_one_string))
-
-"""# TASK #6: TEXT DATA CLEANING 101"""
-
-import string
-string.punctuation
-
-Test = '$I Love Coursera &Rhyme Guided Projects...!!!!'
-
-Test_punc_removed = [char for char in Test if char not in string.punctuation]
-Test_punc_removed
-
-# Join the characters again to form the string.
-Test_punc_removed_join = ''.join(Test_punc_removed)
-Test_punc_removed_join
-
-import nltk # Natural Language tool kit
-
-# You have to download stopwords Package to execute this command
-from nltk.corpus import stopwords
-nltk.download('stopwords')
-stopwords.words('english')
-STOPWORDS = stopwords.words('english') #used in the dash plotly
-
-Test_punc_removed_join = 'I have been enjoying these coding, programming and AI guided Projects on Rhyme and Coursera'
-
-Test_punc_removed_join_clean = [word for word in Test_punc_removed_join.split() if word.lower() not in stopwords.words('english')]
-
-Test_punc_removed_join_clean
-
-"""**MINI CHALLENGE #5:** 
-- **For the following text, create a pipeline to remove punctuations followed by removing stopwords and test the pipeline**
-- **mini_challenge = 'Here is a mini challenge, that will teach you how to remove stopwords and punctuations from text..!!'**
-"""
-
-mini_challenge = 'Here is a mini challenge, that will teach you how to remove stopwords and punctuations from text..!!'
-
-import string
-
-challege = [ char for char in mini_challenge  if char not in string.punctuation ]
-challenge = ''.join(challege)
-challenge = [  word for word in challenge.split() if word.lower() not in stopwords.words('english')  ] 
-challenge
-
-"""# TASK #7: PERFORM COUNT VECTORIZATION (TOKENIZATION)
-
-![image.png](attachment:image.png)
-"""
-
-from sklearn.feature_extraction.text import CountVectorizer
-sample_data = ['This is the first paper.','This document is the second paper.','And this is the third one.','Is this the first paper?']
-vectorizer = CountVectorizer()
-X = vectorizer.fit_transform(sample_data)
-
-print(vectorizer.get_feature_names())
-
-print(X.toarray())
-
-"""**MINI CHALLENGE #6:**
-- **Without doing any code, perform count vectorization for the following list:**
-    -  mini_challenge = ['Hello World','Hello Hello World','Hello World world world']
-- **Confirm your answer with code**
-"""
-
-mini_challenge = ['Hello World','Hello Hello World','Hello World world world']
-vectorizer_challenge = CountVectorizer()
-X_challenge = vectorizer.fit_transform(mini_challenge)
-print(X_challenge.toarray())
-
-"""# TASK #8: CREATE A PIPELINE TO REMOVE PUNCTUATIONS, STOPWORDS AND PERFORM COUNT VECTORIZATION"""
-
-# Let's define a pipeline to clean up all the messages 
-# The pipeline performs the following: (1) remove punctuation, (2) remove stopwords
-
-def process_text(text):
-    test_punc_removed = [char for char in text if char not in string.punctuation]
-    test_punc_removed = ''.join(test_punc_removed)
-    test_punc_removed = [word for word in test_punc_removed.split() if word.lower() not in stopwords.words('english')]
-    
-    return test_punc_removed
-
-# Let's test the newly added function
-reviews_df_clean = reviews_df['verified_reviews'].apply(process_text)
-
-# show the original review
-print(reviews_df['verified_reviews'][5])
-
-# show the cleaned up version
-print(reviews_df_clean[5])
-
-from sklearn.feature_extraction.text import CountVectorizer
-# Define the cleaning pipeline we defined earlier
-vectorizer = CountVectorizer(analyzer = process_text)
-reviews_countvectorizer = vectorizer.fit_transform(reviews_df['verified_reviews'])
-
-print(vectorizer.get_feature_names())
-
-print(reviews_countvectorizer.toarray())
-
-reviews_countvectorizer.shape
-
-reviews = pd.DataFrame(reviews_countvectorizer.toarray())
-
-X = reviews
-
-X
-
-y = reviews_df['feedback']
-y
-
-"""**MINI CHALLENGE #7:**
-- **What is the shape of X and Y**
-"""
-
-X.shape, y.shape
-
-"""# TASK #9: TRAIN AND TEST NAIVE BAYES CLASSIFIER MODEL"""
-
-from sklearn.model_selection import train_test_split
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2)
-
-from sklearn.naive_bayes import MultinomialNB
-NB_classifier = MultinomialNB()
-NB_classifier.fit(X_train, y_train)
-
-"""![image.png](attachment:image.png)"""
-
-from sklearn.metrics import classification_report, confusion_matrix
-
-# Predicting the Test set results
-y_predict_test = NB_classifier.predict(X_test)
-cm = confusion_matrix(y_test, y_predict_test)
-sns.heatmap(cm, annot = True)
-
-print(classification_report(y_test, y_predict_test))
-
-"""**MINI CHALLENGE #8:**
-- **Train a logistic Regression classifier and assess its performance**
-"""
-
-from sklearn.linear_model import LogisticRegression
-
-model = LogisticRegression()
-model.fit(X_train, y_train)
-
-y_pred = model.predict(X_test)
-
-cm = confusion_matrix(y_pred, y_test)
-sns.heatmap(cm, annot = True)
-
-print(classification_report(y_test, y_pred))
-
-"""# EXCELLENT JOB! YOU SHOULD BE PROUD OF YOUR NEWLY ACQUIRED SKILLS"""
-
-
-
-"""# MINI CHALLENGE SOLUTIONS
-
-**MINI CHALLENGE #2 SOLUTION:** 
-- **Plot the countplot for the feedback column**
-- **Roughly how many positive and negative feedback are present in the dataset?**
-"""
-
-# Plot the countplot for feedback
-# Positive ~2800
-# Negative ~250
-sns.countplot(x = reviews_df['feedback'])
-
-"""**MINI CHALLENGE #3 SOLUTION:**
-- **View the message with the average length**
-"""
-
-# Let's see the message with mean length 
-reviews_df[reviews_df['length'] == 132]['verified_reviews'].iloc[0]
-
-"""**MINI CHALLENGE #4 SOLUTION:** 
-- **Plot the wordcloud of the "negative" dataframe** 
-- **What do you notice? Does the data make sense?**
-"""
-
-sentences = negative['verified_reviews'].tolist()
-len(sentences)
-sentences_as_one_string =" ".join(sentences)
-plt.figure(figsize = (20,20))
-plt.imshow(WordCloud().generate(sentences_as_one_string))
-
-"""**MINI CHALLENGE #5 SOLUTION:** 
-- **For the following text, create a pipeline to remove punctuations followed by removing stopwords and test the pipeline**
-- **mini_challenge = 'Here is a mini challenge, that will teach you how to remove stopwords and punctuations from text..!!'**
-"""
-
-mini_challenge = 'Here is a mini challenge, that will teach you how to remove stopwords and punctuations from text..!!'
-challege = [ char for char in mini_challenge  if char not in string.punctuation ]
-challenge = ''.join(challege)
-challenge = [  word for word in challenge.split() if word.lower() not in stopwords.words('english')  ] 
-challenge
-
-"""**MINI CHALLENGE #6 SOLUTION:**
-- **Without doing any code, perform count vectorization for the following list:**
-    -  mini_challenge = ['Hello World','Hello Hello World','Hello World world world']
-- **Confirm your answer with code**
-"""
-
-mini_challenge = ['Hello World','Hello Hello World','Hello World world world']
-
-mini_challenge = ['Hello World', 'Hello Hello Hello World world', 'Hello Hello World world world World']
-
-vectorizer_challenge = CountVectorizer()
-X_challenge = vectorizer_challenge.fit_transform(mini_challenge)
-print(X_challenge.toarray())
-
-"""**MINI CHALLENGE #7 SOLUTION:**
-- **What is the shape of X and Y**
-"""
-
-X.shape
-
-y.shape
-
-"""**MINI CHALLENGE #8 SOLUTION:**
-- **Train a logistic Regression classifier and assess its performance**
-"""
-
-from sklearn.linear_model import LogisticRegression
-
-model = LogisticRegression()
-model.fit(X_train, y_train)
-
-y_pred = model.predict(X_test)
-
-cm = confusion_matrix(y_pred, y_test)
-sns.heatmap(cm, annot = True)
-
-print(classification_report(y_test, y_pred))
+reviews_df = pd.read_csv('amazon_reviews.csv') #you should change the path
+bigram_df = pd.read_csv('bigram_df_n.csv') #you should change the path 
+embed_df = pd.read_csv('embed_df_n.csv') #you should change the path 
+vects_df = pd.read_csv('vects_df_n.csv') #you should change the path 
 
 """# Excellent Job!
 
 # LDA PART
 """
-
+try:
+    from collections.abc import Iterable
+except ImportError:
+    from collections import Iterable
 import spacy  # for our NLP processing
 import nltk  # to use the stopwords library
 import string  # for a list of all punctuation
 from nltk.corpus import stopwords  # for a list of stopwords
-import gensim
+#import gensim
 from sklearn.manifold import TSNE
 import pathlib
 import pandas as pd
-from wordcloud import STOPWORDS
+#from wordcloud import STOPWORDS
 import re
 import json
 
-# Now we can load and use spacy to analyse our reviews
-nlp = spacy.load("en_core_web_sm")
-
-
-def format_topics_sentences(ldamodel, corpus, texts, dates):
-    sent_topics_df = pd.DataFrame()
-
-    # Get main topic in each document
-    for i, row in enumerate(ldamodel[corpus]):
-        row = sorted(row, key=lambda x: (x[1]), reverse=True)
-        # Get the Dominant topic, Perc Contribution and Keywords for each document
-        for j, (topic_num, prop_topic) in enumerate(row):
-            if j == 0:  # => dominant topic
-                wp = ldamodel.show_topic(topic_num)
-                topic_keywords = ", ".join([word for word, prop in wp])
-                sent_topics_df = sent_topics_df.append(
-                    pd.Series([int(topic_num), round(prop_topic, 4), topic_keywords]),
-                    ignore_index=True,
-                )
-            else:
-                break
-    sent_topics_df.columns = ["Dominant_Topic", "Perc_Contribution", "Topic_Keywords"]
-
-    # Add original text to the end of the output
-    contents = pd.Series(texts)
-
-    sent_topics_df = pd.concat([sent_topics_df, contents, pd.Series(dates)], axis=1)
-    return sent_topics_df
-
-
-def lda_analysis(df, stop_words):
-    
-    def cleanup_text(doc):
-        doc = nlp(doc, disable=["parser", "ner"])
-        tokens = [tok.lemma_.lower().strip() for tok in doc if tok.lemma_ != "-PRON-"]
-        tokens = [
-            tok for tok in tokens if tok not in stop_words and tok not in punctuations
-        ]
-        return tokens
-
-    # Clean up and take only rows where we have text
-    df = df[pd.notnull(df["verified_reviews"])]
-    docs = list(df["verified_reviews"].values)
-
-    punctuations = string.punctuation
-
-    processed_docs = list(map(cleanup_text, docs))
-    print("len(processed_docs)", len(processed_docs))
-    if len(processed_docs) < 11:
-        print("INSUFFICIENT DOCS TO RUN LINEAR DISCRIMINANT ANALYSIS")
-        return (None, None, None, None)
-
-    dictionary = gensim.corpora.Dictionary(processed_docs)
-    bow_corpus = [dictionary.doc2bow(doc) for doc in processed_docs]
-    print("len(bow_corpus)", len(bow_corpus))
-    print("dictionary", len(list(dictionary.keys())))
-    if len(list(dictionary.keys())) < 1:
-        print("INSUFFICIENT DICTS TO RUN LINEAR DISCRIMINANT ANALYSIS")
-        return (None, None, None, None)
-
-    lda_model = gensim.models.LdaModel(
-        bow_corpus, num_topics=5, id2word=dictionary, passes=10
-    )
-
-    df_topic_sents_keywords = format_topics_sentences(
-        ldamodel=lda_model,
-        corpus=bow_corpus,
-        texts=docs,
-        dates=list(df["Date received"].values),
-    )
-    print("len(df_topic_sents_keywords)", len(df_topic_sents_keywords))
-    print("df_topic_sents_keywords.head()", df_topic_sents_keywords.head())
-    df_dominant_topic = df_topic_sents_keywords.reset_index()
-    df_dominant_topic.columns = [
-        "Document_No",
-        "Dominant_Topic",
-        "Topic_Perc_Contrib",
-        "Keywords",
-        "Text",
-        "Date",
-    ]
-
-    topic_num, tsne_lda = tsne_analysis(lda_model, bow_corpus)
-
-    return (tsne_lda, lda_model, topic_num, df_dominant_topic)
-
-
-def tsne_analysis(ldamodel, corpus):
-    topic_weights = []
-    for i, row_list in enumerate(ldamodel[corpus]):
-        topic_weights.append([w for i, w in row_list])
-
-    # Array of topic weights
-    df_topics = pd.DataFrame(topic_weights).fillna(0).values
-
-
-
-    # Dominant topic number in each doc
-    topic_nums = np.argmax(df_topics, axis=1)
-
-    # tSNE Dimension Reduction
-    try:
-        tsne_model = TSNE(
-            n_components=2, verbose=1, random_state=0, angle=0.99, init="pca"
-        )
-        tsne_lda = tsne_model.fit_transform(df_topics)
-    except:
-        print("TSNE_ANALYSIS WENT WRONG, PLEASE RE-CHECK YOUR DATASET")
-        return (topic_nums, None)
-
-    return (topic_nums, tsne_lda)
-
 GLOBAL_DF = reviews_df.copy()
-
+STOPWORDS = stop.copy()
 ADDITIONAL_STOPWORDS = [
     "XXXX",
     "XX",
@@ -629,131 +52,22 @@ ADDITIONAL_STOPWORDS = [
     "n't"
 ]
 for stopword in ADDITIONAL_STOPWORDS:
-    STOPWORDS.add(stopword)
+    STOPWORDS.append(stopword)
 
 def add_stopwords(selected_bank):
 
     selected_bank_words = re.findall(r"[\w']+", selected_bank)
     for word in selected_bank_words:
-        STOPWORDS.add(word.lower())
+        STOPWORDS.append(word.lower())
 
     print("Added %s stopwords:" % selected_bank)
     for word in selected_bank_words:
         print("\t", word)
     return STOPWORDS
 
-def precompute_all_lda():
-    """ QD function for precomputing all necessary LDA results
-     to allow much faster load times when the app runs. """
-
-    failed_banks = []
-    counter = 0
-    bank_names = GLOBAL_DF["variation"].value_counts().keys().tolist()
-    results = {}
-
-    for bank in bank_names:
-        try:
-            print("crunching LDA for: ", bank)
-            add_stopwords(bank)
-            bank_df = GLOBAL_DF[GLOBAL_DF["variation"] == bank]
-            tsne_lda, lda_model, topic_num, df_dominant_topic = lda_analysis(
-                bank_df, list(STOPWORDS)
-            )
-
-            topic_top3words = [
-                (i, topic)
-                for i, topics in lda_model.show_topics(formatted=False)
-                for j, (topic, wt) in enumerate(topics)
-                if j < 3
-            ]
-
-            df_top3words_stacked = pd.DataFrame(
-                topic_top3words, columns=["topic_id", "words"]
-            )
-            df_top3words = df_top3words_stacked.groupby("topic_id").agg(", \n".join)
-            df_top3words.reset_index(level=0, inplace=True)
-
-            # print(len(tsne_lda))
-            # print(len(df_dominant_topic))
-            tsne_df = pd.DataFrame(
-                {
-                    "tsne_x": tsne_lda[:, 0],
-                    "tsne_y": tsne_lda[:, 1],
-                    "topic_num": topic_num,
-                    "doc_num": df_dominant_topic["Document_No"],
-                }
-            )
-
-            topic_top3words = [
-                (i, topic)
-                for i, topics in lda_model.show_topics(formatted=False)
-                for j, (topic, wt) in enumerate(topics)
-                if j < 3
-            ]
-
-            df_top3words_stacked = pd.DataFrame(
-                topic_top3words, columns=["topic_id", "words"]
-            )
-            df_top3words = df_top3words_stacked.groupby("topic_id").agg(", \n".join)
-            df_top3words.reset_index(level=0, inplace=True)
-
-            results[str(bank)] = {
-                "df_top3words": df_top3words.to_json(),
-                "tsne_df": tsne_df.to_json(),
-                "df_dominant_topic": df_dominant_topic.to_json(),
-            }
-
-            counter += 1
-        except:
-            print("SOMETHING WENT HORRIBLY WRONG WITH : ", bank)
-            failed_banks.append(bank)
-
-    with open("precomputed.json", "w+") as res_file:
-        json.dump(results, res_file)
-
-    print("DONE")
-    print("did %d variations" % counter)
-    print("failed %d:" % len(failed_banks))
-    for fail in failed_banks:
-        print(fail)
-
-precompute_all_lda()
-
-"""# EMBEDDING VECTORS PART"""
-
-vects_df = embed_df.copy()
-
-#words converted to sentences by tfidf weights.
-#Step 1. Prepare data
-#step 2. Have bogus word2vec (of the size of our vocab)
-#Step 3. Calculate a column containing word2vec for sentences
-
-from sklearn.feature_extraction.text import TfidfVectorizer
-tfidf = TfidfVectorizer()
-tfidf_matrix = tfidf.fit_transform(vects_df.bigram).todense()
-vocab = tfidf.vocabulary_
-vocab
-
-word2vec = np.random.randn(len(vocab),300)
-
-sent2vec_matrix = np.dot(tfidf_matrix, word2vec) # word2vec here contains vectors in the same order as in vocab
-vects_df["ngram2vec"] = sent2vec_matrix.tolist()
-
-vects_df
-
-vects_df = vects_df.ngram2vec.apply(pd.Series) #split horizontally
-
-vects_df
-
-"""# DASH PART"""
-
-#!pip install dash pip install emoji
-#!pip install dash_bootstrap_components
-#!pip install jupyter-dash
-
 #since we are using google colab/jupyter we should use JupyterDash
 import dash_bootstrap_components as dbc
-from jupyter_dash import JupyterDash
+#from jupyter_dash import JupyterDash
 import dash
 from dash.dependencies import Input, Output
 import dash_table
@@ -765,16 +79,14 @@ import plotly.graph_objs as go
 import emoji
 import pandas as pd
 import plotly
-from plotly.offline import iplot
-from plotly.offline import init_notebook_mode, iplot
-from plotly.offline import init_notebook_mode,iplot
+
 import plotly.graph_objects as go
 import cufflinks as cf
-init_notebook_mode(connected=True)
+#init_notebook_mode(connected=True)
 import plotly.express as px
 from dash.dependencies import Output, Input, State
 from dateutil import relativedelta
-from wordcloud import WordCloud, STOPWORDS
+from wordcloud import WordCloud
 from sklearn.manifold import TSNE
 import pathlib
 import json
@@ -787,7 +99,7 @@ import flask
 #app = dash.Dash(__name__)   #,server= server , routes_pathname_prefix='/dash/' 
 #app = JupyterDash(__name__)  #since we are using google colab/jupyter we should use JupyterDash
 #__name__, external_stylesheets=[dbc.themes.BOOTSTRAP]
-app = dash.Dash(__name__)
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server  # for Heroku deployment
 
 DATA_PATH = "/content/drive/MyDrive/Dash_plotly_home"
@@ -817,7 +129,7 @@ ADDITIONAL_STOPWORDS = [
     "n't",
 ]
 for stopword in ADDITIONAL_STOPWORDS:
-    STOPWORDS.add(stopword)
+    STOPWORD.append(stopword)
 
 # Commented out IPython magic to ensure Python compatibility.
 def sample_data(dataframe, float_percent):
