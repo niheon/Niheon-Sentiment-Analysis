@@ -1,4 +1,2 @@
-pros_cons
-reuters
 stopwords
 omw-1.4
