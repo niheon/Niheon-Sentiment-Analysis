@@ -6,12 +6,9 @@ import nltk
 import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 import string
-import nltk
 from nltk.stem import PorterStemmer
 from nltk.stem.wordnet import WordNetLemmatizer
 import spacy
-import nltk
-nltk.download('wordnet')
 nltk.download('omw-1.4')
 from nltk.corpus import stopwords
 stop = stopwords.words('english')
@@ -791,7 +788,7 @@ def comp_bigram_comparisons(comp_first, comp_second):
         Output("time-window-slider", "min"),
         Output("time-window-slider", "max"),
         Output("time-window-slider", "step"),
-        Output("time-window-slider", "value"),
+        Output("time-window-slider", "value")
     ],
     [Input("n-selection-slider", "value")],
 )
