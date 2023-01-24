@@ -6,19 +6,32 @@ import nltk
 import re
 from sklearn.feature_extraction.text import TfidfVectorizer
 import string
+import nltk
 from nltk.stem import PorterStemmer
 from nltk.stem.wordnet import WordNetLemmatizer
 import spacy
-nltk.download('omw-1.4')
+import nltk
+
+nltk.download("wordnet")
+nltk.download("omw-1.4")
 from nltk.corpus import stopwords
-stop = stopwords.words('english')
+
+stop = stopwords.words("english")
 
 # Load the data
-reviews_df = pd.read_csv('amazon_reviews.csv') #you should change the path
-bigram_df = pd.read_csv('bigram_df_n.csv') #you should change the path 
-embed_df = pd.read_csv('embed_df_n.csv') #you should change the path 
-vects_df = pd.read_csv('vects_df_n.csv') #you should change the path 
+reviews_df = pd.read_csv("amazon_reviews.csv")  # you should change the path
+bigram_df = pd.read_csv("bigram_df_n.csv")  # you should change the path
+embed_df = pd.read_csv("embed_df_n.csv")  # you should change the path
+vects_df = pd.read_csv("vects_df_n.csv")  # you should change the path
 
+#reviews_df =reviews_df.iloc[:350]
+
+
+reviews_df['Date received'] = pd.to_datetime(reviews_df['date'].str.strip(), infer_datetime_format=True)
+reviews_df['Date received'] = pd.to_datetime(reviews_df['Date received'].dt.strftime('%m-%d-%Y'))
+
+min_date = reviews_df["Date received"].min()
+max_date = reviews_df["Date received"].max()
 """# Excellent Job!
 
 # LDA PART
@@ -31,25 +44,22 @@ import spacy  # for our NLP processing
 import nltk  # to use the stopwords library
 import string  # for a list of all punctuation
 from nltk.corpus import stopwords  # for a list of stopwords
-#import gensim
+
+# import gensim
 from sklearn.manifold import TSNE
 import pathlib
 import pandas as pd
-#from wordcloud import STOPWORDS
+
+# from wordcloud import STOPWORDS
 import re
 import json
 
 GLOBAL_DF = reviews_df.copy()
 STOPWORDS = stop.copy()
-ADDITIONAL_STOPWORDS = [
-    "XXXX",
-    "XX",
-    "xx",
-    "xxxx",
-    "n't"
-]
+ADDITIONAL_STOPWORDS = ["XXXX", "XX", "xx", "xxxx", "n't"]
 for stopword in ADDITIONAL_STOPWORDS:
     STOPWORDS.append(stopword)
+
 
 def add_stopwords(selected_bank):
 
@@ -62,16 +72,18 @@ def add_stopwords(selected_bank):
         print("\t", word)
     return STOPWORDS
 
-#since we are using google colab/jupyter we should use JupyterDash
+
+# since we are using google colab/jupyter we should use JupyterDash
 import dash_bootstrap_components as dbc
-#from jupyter_dash import JupyterDash
+
+# from jupyter_dash import JupyterDash
 import dash
 from dash.dependencies import Input, Output
 import dash_table
 import dash_core_components as dcc
 import dash_html_components as html
 import pandas as pd
-import numpy as np 
+import numpy as np
 import plotly.graph_objs as go
 import emoji
 import pandas as pd
@@ -79,7 +91,8 @@ import plotly
 
 import plotly.graph_objects as go
 import cufflinks as cf
-#init_notebook_mode(connected=True)
+
+# init_notebook_mode(connected=True)
 import plotly.express as px
 from dash.dependencies import Output, Input, State
 from dateutil import relativedelta
@@ -93,9 +106,9 @@ import json
 from datetime import datetime
 import flask
 
-#app = dash.Dash(__name__)   #,server= server , routes_pathname_prefix='/dash/' 
-#app = JupyterDash(__name__)  #since we are using google colab/jupyter we should use JupyterDash
-#__name__, external_stylesheets=[dbc.themes.BOOTSTRAP]
+# app = dash.Dash(__name__)   #,server= server , routes_pathname_prefix='/dash/'
+# app = JupyterDash(__name__)  #since we are using google colab/jupyter we should use JupyterDash
+# __name__, external_stylesheets=[dbc.themes.BOOTSTRAP]
 app = dash.Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 server = app.server  # for Heroku deployment
 
@@ -126,7 +139,7 @@ ADDITIONAL_STOPWORDS = [
     "n't",
 ]
 for stopword in ADDITIONAL_STOPWORDS:
-    STOPWORD.append(stopword)
+    STOPWORDS.append(stopword)
 
 # Commented out IPython magic to ensure Python compatibility.
 def sample_data(dataframe, float_percent):
@@ -139,7 +152,7 @@ def sample_data(dataframe, float_percent):
 
 
 def get_complaint_count_by_company(dataframe):
-    """ Helper function to get review counts for unique variations """
+    """Helper function to get review counts for unique variations"""
     company_counts = dataframe["variation"].value_counts()
     # we filter out all banks with less than 11 reviews for now
     company_counts = company_counts[company_counts > 10]
@@ -149,10 +162,10 @@ def get_complaint_count_by_company(dataframe):
 
 
 def calculate_bank_sample_data(dataframe, sample_size, time_values):
-    """ TODO """
+    """TODO"""
     print(
         "making reviews_sample_data with sample_size count: %s and time_values: %s"
-#         % (sample_size, time_values)
+        #         % (sample_size, time_values)
     )
     if time_values is not None:
         min_date = time_values[0]
@@ -170,7 +183,7 @@ def calculate_bank_sample_data(dataframe, sample_size, time_values):
 
 
 def make_local_df(selected_bank, time_values, n_selection):
-    """ TODO """
+    """TODO"""
     print("redrawing dataset-wordcloud...")
     n_float = float(n_selection / 100)
     print("got time window:", str(time_values))
@@ -185,7 +198,7 @@ def make_local_df(selected_bank, time_values, n_selection):
         ]
     if selected_bank:
         local_df = local_df[local_df["variation"] == selected_bank]
-        
+
     return local_df
 
 
@@ -232,7 +245,7 @@ def make_marks_time_slider(mini, maxi):
 
 
 def time_slider_to_date(time_values):
-    """ TODO """
+    """TODO"""
     min_date = datetime.fromtimestamp(time_values[0]).strftime("%c")
     max_date = datetime.fromtimestamp(time_values[1]).strftime("%c")
     print("Converted time_values: ")
@@ -250,7 +263,10 @@ def make_options_bank_drop(values):
         ret.append({"label": value, "value": value})
     return ret
 
+
 import matplotlib.colors as mcolors
+
+
 def populate_lda_scatter(tsne_df, df_top3words, df_dominant_topic):
     """Calculates LDA and returns figure data you can jam into a dcc.Graph()"""
     mycolors = np.array([color for name, color in mcolors.TABLEAU_COLORS.items()])
@@ -398,11 +414,12 @@ NAVBAR = dbc.Navbar(
                 [
                     dbc.Col(html.Img(src=PLOTLY_LOGO, height="30px")),
                     dbc.Col(
-                        dbc.NavbarBrand("NLP DASHBOARD for reviews classification", className="ml-2")
+                        dbc.NavbarBrand(
+                            "NLP DASHBOARD for reviews classification", className="ml-2"
+                        )
                     ),
                 ],
                 align="center",
-                
             ),
             href="https://plot.ly",
         )
@@ -412,50 +429,58 @@ NAVBAR = dbc.Navbar(
     sticky="top",
 )
 
-LEFT_COLUMN = dbc.Col(html.Div(
-    [
-        html.H4(children="Select a variation & dataset size", className="display-5"),
-        html.Hr(className="my-2"),
-        html.Label("Select percentage of dataset", className="lead"),
-        html.P(
-            "(Lower is faster. Higher is more precise)",
-            style={"fontSize": 10, "font-weight": "lighter"},
-        ),
-        dcc.Slider(
-            id="n-selection-slider",
-            min=1,
-            max=100,
-            step=1,
-            marks={
-                0: "0%",
-                10: "",
-                20: "20%",
-                30: "",
-                40: "40%",
-                50: "",
-                60: "60%",
-                70: "",
-                80: "80%",
-                90: "",
-                100: "100%",
-            },
-            value=20,
-        ),
-        html.Label("Select a variation", style={"marginTop": 50}, className="lead"),
-        html.P(
-            "(You can use the dropdown or click the barchart on the right)",
-            style={"fontSize": 10, "font-weight": "lighter"},
-        ),
-        dcc.Dropdown(
-            id="bank-drop", clearable=False, style={"marginBottom": 50, "font-size": 12}
-        ),
-        html.Label("Select time frame", className="lead"),
-        html.Div(dcc.RangeSlider(id="time-window-slider"), style={"marginBottom": 50}),
-        html.P(
-            "(You can define the time frame down to month granularity)",
-            style={"fontSize": 10, "font-weight": "lighter"},
-        ),
-    ])
+LEFT_COLUMN = dbc.Col(
+    html.Div(
+        [
+            html.H4(
+                children="Select a variation & dataset size", className="display-5"
+            ),
+            html.Hr(className="my-2"),
+            html.Label("Select percentage of dataset", className="lead"),
+            html.P(
+                "(Lower is faster. Higher is more precise)",
+                style={"fontSize": 10, "font-weight": "lighter"},
+            ),
+            dcc.Slider(
+                id="n-selection-slider",
+                min=1,
+                max=100,
+                step=1,
+                marks={
+                    0: "0%",
+                    10: "",
+                    20: "20%",
+                    30: "",
+                    40: "40%",
+                    50: "",
+                    60: "60%",
+                    70: "",
+                    80: "80%",
+                    90: "",
+                    100: "100%",
+                },
+                value=20,
+            ),
+            html.Label("Select a variation", style={"marginTop": 50}, className="lead"),
+            html.P(
+                "(You can use the dropdown or click the barchart on the right)",
+                style={"fontSize": 10, "font-weight": "lighter"},
+            ),
+            dcc.Dropdown(
+                id="bank-drop",
+                clearable=False,
+                style={"marginBottom": 50, "font-size": 12},
+            ),
+            html.Label("Select time frame", className="lead"),
+            html.Div(
+                dcc.RangeSlider(id="time-window-slider"), style={"marginBottom": 50}
+            ),
+            html.P(
+                "(You can define the time frame down to month granularity)",
+                style={"fontSize": 10, "font-weight": "lighter"},
+            ),
+        ]
+    )
 )
 
 LDA_PLOT = dcc.Loading(
@@ -704,8 +729,18 @@ TOP_BIGRAM_COMPS = [
 
 BODY = dbc.Container(
     [
-        dbc.Row([dbc.Col(dbc.Card(TOP_BIGRAM_COMPS)),], style={"marginTop": 30}),
-        dbc.Row([dbc.Col(dbc.Card(TOP_BIGRAM_PLOT)),], style={"marginTop": 30}),
+        dbc.Row(
+            [
+                dbc.Col(dbc.Card(TOP_BIGRAM_COMPS)),
+            ],
+            style={"marginTop": 30},
+        ),
+        dbc.Row(
+            [
+                dbc.Col(dbc.Card(TOP_BIGRAM_PLOT)),
+            ],
+            style={"marginTop": 30},
+        ),
         dbc.Row(
             [
                 dbc.Col(LEFT_COLUMN, md=4, align="center"),
@@ -727,7 +762,8 @@ app.layout = html.Div(children=[NAVBAR, BODY])
 
 
 @app.callback(
-    Output("bigrams-scatter", "figure"), [Input("bigrams-perplex-dropdown", "value")],
+    Output("bigrams-scatter", "figure"),
+    [Input("bigrams-perplex-dropdown", "value")],
 )
 def populate_bigram_scatter(perplexity):
     X_embedded = TSNE(n_components=2, perplexity=perplexity).fit_transform(vects_df)
@@ -788,7 +824,7 @@ def comp_bigram_comparisons(comp_first, comp_second):
         Output("time-window-slider", "min"),
         Output("time-window-slider", "max"),
         Output("time-window-slider", "step"),
-        Output("time-window-slider", "value")
+        Output("time-window-slider", "value"),
     ],
     [Input("n-selection-slider", "value")],
 )
@@ -820,7 +856,7 @@ def populate_time_slider(value):
     [Input("time-window-slider", "value"), Input("n-selection-slider", "value")],
 )
 def populate_bank_dropdown(time_values, n_value):
-    """ TODO """
+    """TODO"""
     print("variation-drop: TODO USE THE TIME VALUES AND N-SLIDER TO LIMIT THE DATASET")
     if time_values is not None:
         pass
@@ -835,7 +871,7 @@ def populate_bank_dropdown(time_values, n_value):
     [Input("n-selection-slider", "value"), Input("time-window-slider", "value")],
 )
 def update_bank_sample_plot(n_value, time_values):
-    """ TODO """
+    """TODO"""
     print("redrawing variation-sample...")
     print("\tn is:", n_value)
     print("\ttime_values is:", time_values)
@@ -877,7 +913,7 @@ def update_bank_sample_plot(n_value, time_values):
     [Input("bank-drop", "value"), Input("time-window-slider", "value")],
 )
 def update_lda_table(selected_bank, time_values):
-    """ Update LDA table and scatter plot based on precomputed data """
+    """Update LDA table and scatter plot based on precomputed data"""
 
     if selected_bank in PRECOMPUTED_LDA:
         df_dominant_topic = pd.read_json(
@@ -910,7 +946,7 @@ def update_lda_table(selected_bank, time_values):
     ],
 )
 def update_wordcloud_plot(value_drop, time_values, n_selection):
-    """ Callback to rerender wordcloud plot """
+    """Callback to rerender wordcloud plot"""
     local_df = make_local_df(value_drop, time_values, n_selection)
     wordcloud, frequency_figure, treemap = plotly_wordcloud(local_df)
     alert_style = {"display": "none"}
@@ -926,7 +962,7 @@ def update_wordcloud_plot(value_drop, time_values, n_selection):
     [State("lda-table", "filter_query")],
 )
 def filter_table_on_scatter_click(tsne_click, current_filter):
-    """ TODO """
+    """TODO"""
     if tsne_click is not None:
         selected_complaint = tsne_click["points"][0]["hovertext"]
         if current_filter != "":
@@ -946,12 +982,13 @@ def filter_table_on_scatter_click(tsne_click, current_filter):
 
 @app.callback(Output("bank-drop", "value"), [Input("bank-sample", "clickData")])
 def update_bank_drop_on_click(value):
-    """ TODO """
+    """TODO"""
     if value is not None:
         selected_bank = value["points"][0]["x"]
         return selected_bank
     return "Charcoal Fabric"
 
+
 if __name__ == "__main__":
-    #app.run_server(mode= 'inline')
-    app.run_server(debug=True ,use_reloader=False)
+    # app.run_server(mode= 'inline')
+    app.run_server(debug=True, use_reloader=False)
