@@ -44,12 +44,13 @@ import spacy  # for our NLP processing
 import nltk  # to use the stopwords library
 import string  # for a list of all punctuation
 from nltk.corpus import stopwords  # for a list of stopwords
-
+import pickle
 # import gensim
 from sklearn.manifold import TSNE
 import pathlib
 import pandas as pd
-
+from sklearn.feature_extraction.text import TfidfTransformer
+from sklearn.feature_extraction.text import CountVectorizer
 # from wordcloud import STOPWORDS
 import re
 import json
@@ -612,6 +613,39 @@ WORDCLOUD_PLOTS = [
     ),
 ]
 
+
+PRED =  dbc.Container(
+        
+        dbc.Row(
+                [
+                    html.H1(id = 'heading', children = "Reviews prediction with ML", className = 'display-3 mb-4'),
+                    html.H3(id = 'heading_pie', children = 'Select a review to get its predicted sentiment :',className = 'display-6 mb-7',
+                            style = {'margin-top': '30px','margin-bottom': '15px'}),
+                    
+                    dbc.Container([
+                            dcc.Dropdown(
+                    id='dropdown',
+                    placeholder = 'Select a Review',
+                    options=[{'label': i[:60] + "...", 'value': i} for i in reviews_df.verified_reviews[:1000]],
+                    value = reviews_df.verified_reviews[0],
+                    style = {'margin-bottom': '30px'}
+                    
+                )
+                       ],
+                        style = {'padding-left': '50px', 'padding-right': '50px'}
+                        ),
+                    dbc.Button("Submit", color="dark", className="mt-2 mb-3", id = 'button', style = {'width': '100px'}),
+                    dbc.Row([html.Div(id='result1')]),
+                    dbc.Textarea(id = 'textarea', className="mb-3", placeholder="Enter the Review", value = '', style={'width': '100%', 'height': 100}),
+                    dbc.Button("Submit", color="dark", className="mt-2 mb-3", id = 'button_2', style = {'width': '100px'}),
+                    dbc.Row([html.Div(id='result')])
+                    ],
+                className = 'text-center'
+                ),
+        className = 'mt-4'
+        )
+
+
 TOP_BANKS_PLOT = [
     dbc.CardHeader(html.H5("Top variations by number of verified reviews")),
     dbc.CardBody(
@@ -754,11 +788,62 @@ BODY = dbc.Container(
     className="mt-12",
 )
 
-app.layout = html.Div(children=[NAVBAR, BODY])
+app.layout = html.Div(children=[NAVBAR, BODY,PRED])
 
 """
 #  Callbacks
 """
+@app.callback(
+    Output('result', 'children'),
+    [
+    Input('button_2', 'n_clicks')
+    ],
+    [
+    State('textarea', 'value')
+    ]
+    )    
+def update_app_ui(n_clicks, textarea):
+    transformer = TfidfTransformer()
+    file = open("vocab.pkl", 'rb') 
+    vocab = pickle.load(file)
+    loaded_vec = CountVectorizer(decode_error="replace",vocabulary=vocab)
+    textarea = transformer.fit_transform(loaded_vec.fit_transform([textarea]))
+    file = open("trained_model.pkl", 'rb')
+    pickle_model = pickle.load(file)
+    result_list = pickle_model.predict(textarea)
+    if n_clicks >0:
+        if (result_list == 0 ):
+          result='Negative'
+            
+        elif (result_list == 1 ):
+            result='Positive'
+    return f'the review is {result}'    
+
+@app.callback(
+    Output('result1', 'children'),
+    [
+    Input('button', 'n_clicks')
+    ],
+    [
+    State('dropdown', 'value')
+     ]
+    )
+def update_dropdown(n_clicks, value):
+    transformer = TfidfTransformer()
+    file = open("vocab.pkl", 'rb') 
+    vocab = pickle.load(file)
+    loaded_vec = CountVectorizer(decode_error="replace",vocabulary=vocab)
+    value = transformer.fit_transform(loaded_vec.fit_transform([value]))
+    file = open("trained_model.pkl", 'rb')
+    pickle_model = pickle.load(file)
+    result_list = pickle_model.predict(value)
+    if n_clicks >0:
+        if (result_list == 0 ):
+          result1='Negative'
+            
+        elif (result_list == 1 ):
+            result1='Positive'
+    return f'the review is {result1}' 
 
 
 @app.callback(
