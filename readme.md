@@ -21,7 +21,22 @@ We use the preprocessed data to train several machine learning algorithms, inclu
 We evaluate the performance of the machine learning models using metrics such as accuracy, precision, and recall. We also use the LDA results to understand the topics discussed in the reviews. We present the results using various visualizations, including word clouds, scatter plots, and bar charts.
 
 ## Installing
-To run the code, you need to have Python installed on your computer. Clone the repository and navigate to the project directory. Install the required packages using the following command:
+To run the code, you need to have Python installed on your computer. 
+Clone the repository and navigate to the project directory. Install the required packages using the following command:
+1. Clone the repository:
+
+```bash
+git clone https://github.com/niheon/Niheon-Sentiment-Analysis.git
+```
+
+2. Change to the project directory:
+
+```bash
+cd Niheon-Sentiment-Analysis
+```
+
+3. Install the required packages:
+
 ```bash
 pip install -r requirements.txt
 ```
