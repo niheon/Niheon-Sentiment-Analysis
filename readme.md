@@ -1,5 +1,9 @@
 # Niheon Sentiment Analysis of Amazon Echo Reviews
 
+
+https://user-images.githubusercontent.com/90079975/225488681-b787b617-803b-47b1-817e-513e3fb2ecee.mp4
+
+
 ## Description
 The Amazon Echo is a smart speaker that is designed to make the user's life easier by performing tasks such as playing music, setting alarms, and providing information about the weather and news. The device has become incredibly popular, and as a result, there are millions of reviews available on Amazon's website. In this project, we perform sentiment analysis on the reviews of the Amazon Echo to understand what customers think about the device.
 
